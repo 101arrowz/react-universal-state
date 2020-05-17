@@ -13,5 +13,5 @@
     "outDir": "lib/",
     "declaration": true
   },
-  "include": ["src/**/*.ts", "src/index.tsx"]
+  "include": ["src/**/*.ts"]
 }

@@ -1,6 +1,7 @@
-import React, {
+import {
   SetStateAction,
   ComponentType,
+  createElement,
   useState,
   Component,
   useEffect
@@ -187,19 +188,20 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
       }
 
       render(): JSX.Element {
+        const globalState = this.state;
         return (
-          <GSC
-            {...(this.props as P)}
-            setGlobalState={newState => {
+          createElement(GSC, {
+            ...(this.props as P),
+            setGlobalState(newState) {
               const newGlobalState = (newState instanceof Function
-                ? newState(this.state)
+                ? newState(globalState)
                 : newState) as Partial<T>;
               for (const k in newGlobalState)
                 backend.set(k, newGlobalState[k]!);
               for (const f of backend.stateSubs) f(newGlobalState);
-            }}
-            globalState={this.state}
-          />
+            },
+            globalState
+          })
         );
       }
     };
