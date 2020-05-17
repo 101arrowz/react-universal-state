@@ -100,7 +100,7 @@ const MyWrappedClassComponent = withGlobal(MyClassComponent);
 ```
 
 ## Purpose
-The goal of this package is to provide a clean, versatile, and easy way to manipulate and persist global state. It is meant as a direct replacement for other tools that offer similar functionality (e.g. Redux). It is also extremely small when minified
+The goal of this package is to provide a clean, versatile, and easy way to manipulate and persist global state. It is meant as a direct replacement for other tools that offer similar functionality (e.g. Redux). It is also has an incredibly tiny impact on bundle size when minified.
 
 Like other global state managers, you will still likely need to use a centralized file (i.e. containing all of the global hooks and HOCs) but due to the simplicity of the API, most changes will be much faster with `react-universal-state` than with other packages.
 
