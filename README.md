@@ -100,7 +100,7 @@ const MyWrappedClassComponent = withGlobal(MyClassComponent);
 ```
 
 ## Purpose
-The goal of this package is to provide a clean, versatile, and easy way to manipulate and persist global state. It is meant as a direct replacement for other tools that offer similar functionality (e.g. Redux). It is also has an incredibly tiny impact on bundle size when minified.
+The goal of this package is to provide a clean, versatile, and easy way to manipulate and persist global state. It is meant as a direct replacement for other tools that offer similar functionality (e.g. Redux). It is also incredibly small (under 1kb) and efficient.
 
 Like other global state managers, you will still likely need to use a centralized file (i.e. containing all of the global hooks and HOCs) but due to the simplicity of the API, most changes will be much faster with `react-universal-state` than with other packages.
 
@@ -109,7 +109,10 @@ Detailed documentation will be added in a future update. For now, see the commen
 
 Note that when using the Local Storage persistence backend, all values in the state must be JSON-serializable. Additionally, if you change the order of calls to `createGlobalStateHook` or `createGlobalStateHOC` that use the Local Storage backend, they will load incorrect data; therefore, it's recommended to manually create your own backend.
 ```js
-import { createGlobalStateHook, createLocalStorageBackend } from 'react-universal-state';
+import {
+  createGlobalStateHook,
+  createLocalStorageBackend
+} from 'react-universal-state';
 
 // Specifying a key in the local storage to use removes all order issues
 // Note that reusing this for multiple calls will mean that the global state is
