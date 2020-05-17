@@ -4,7 +4,7 @@ Global state for your React app, simplified.
 
 ## Usage
 ```jsx
-import React from 'react';
+import React, { Fragment } from 'react';
 import {
   createGlobalStateHook,
   createGlobalStateHOC
@@ -34,11 +34,12 @@ const MyFunctionalComponent = () => {
 
   // You can also call useGlobal directly with the name of the global parameter
   const [firstLogin] = useGlobal('firstLogin');
+
   return (
-    <>
+    <Fragment>
       <div>Theme is: {theme}</div>
       {firstLogin && <div>Welcome, new user!</div>}
-    </>
+    </Fragment>
   );
 }
 
@@ -48,20 +49,24 @@ const MyOtherComponent = () => {
     theme: [theme, setTheme],
     firstLogin: [, setFirstLogin]
   } = useGlobal(['theme', 'firstLogin']);
+  
   // Note that if you specify nothing, i.e. with useGlobal() alone, it defaults
   // to using all parameters at once, so the above call could have simply been
   // useGlobal()
   
   return (
-    <>
+    <Fragment>
+
       {/* Clicking either button will update MyFunctionalComponent as well */}
       <button onClick={() => setTheme('dark')}>Dark theme!</button>
+
       {firstLogin && (
         <button onClick={() => setFirstLogin(false)}>
           I'm ready to go!
         </button>
       )}
-    </>
+      
+    </Fragment>
   );
 };
 
@@ -71,8 +76,9 @@ class MyClassComponent extends React.Component {
       globalState: { sessionID, currentlyOnline },
       setGlobalState
     } = this.props;
+    
     return (
-      <>
+      <Fragment>
         <div>Your session ID is {sessionID}</div>
         <button
           onClick={() => {
@@ -83,7 +89,7 @@ class MyClassComponent extends React.Component {
         >
           Click here to refresh
         </button>
-      </>
+      </Fragment>
     );
   }
 };
