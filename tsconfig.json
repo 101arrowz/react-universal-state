@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "alwaysStrict": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "target": "ESNext",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "pretty": true,
+    "jsx": "preserve",
+    "outDir": "lib/",
+    "declaration": true
+  },
+  "include": ["src/**/*.ts", "src/index.tsx"]
+}
