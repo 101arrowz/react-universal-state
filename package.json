@@ -1,8 +1,8 @@
 {
   "name": "react-universal-state",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Global state for your React app, simplified",
-  "main": "lib/index.jsx",
+  "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "author": "Arjun Barrett <arjunbarrett@gmail.com>",
   "license": "MIT",
@@ -22,7 +22,7 @@
   },
   "scripts": {
     "lint": "eslint --fix src/**/*.ts src/index.tsx",
-    "build": "yarn lint && tsc",
+    "build": "yarn lint && tsc && mv lib/index.jsx lib/index.js",
     "prepack": "yarn build",
     "preversion": "yarn lint && yarn test"
   },
