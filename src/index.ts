@@ -6,7 +6,7 @@ import {
   Component,
   useEffect
 } from 'react';
-import { LocalStorageBackend, MemoryBackend } from './persistence';
+import { LocalStorageBackend, MemoryBackend, StateBackend } from './persistence';
 
 type GlobalSetState<T> = React.Dispatch<SetStateAction<T>>;
 type GlobalStateHookResult<T> = [T, GlobalSetState<T>];
@@ -45,30 +45,6 @@ export type GlobalStateHOC<T> = <
   component: ComponentType<P>,
   key?: K | K[]
 ) => ComponentType<Omit<P, keyof GlobalStateProps<Pick<T, K>>>>;
-
-/**
- * An abstract class for defining a backend for storing the global state.
- * Must support a key-value pair model.
- */
-export abstract class StateBackend<T extends Record<string, unknown>> {
-  /** @internal */
-  _stateSubs: ((newVal: Partial<T>) => void)[] = []
-
-  /**
-   * Gets an item by its key. Preferably uses a caching layer for optimal
-   * performance.
-   * @param key The key of the item to get
-   * @returns The value associated with the given key
-   */
-  abstract get<K extends keyof T>(key: K): T[K];
-  /**
-   * Sets the value of a given key
-   * @param key The key of the item to set
-   * @param value The new value for the provided key
-   */
-  abstract set<K extends keyof T>(key: K, value: T[K]): void;
-}
-
 
 const createBackend = <T extends Record<string, unknown>>(
   backend: StateBackend<T> | boolean
@@ -206,4 +182,4 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
   };
 }
 
-export { LocalStorageBackend, MemoryBackend };
+export { StateBackend, LocalStorageBackend, MemoryBackend };
