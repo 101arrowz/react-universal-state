@@ -4,7 +4,7 @@
  */
 export default abstract class StateBackend<T extends Record<string, unknown>> {
   /** @internal */
-  _stateSubs: ((newVal: Partial<T>) => void)[] = []
+  _stateSubs: ((newVal: Partial<T>) => void)[] = [];
 
   /**
    * Gets an item by its key. Preferably uses a caching layer for optimal

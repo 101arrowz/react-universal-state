@@ -1,4 +1,4 @@
-import { StateBackend } from '.';
+import StateBackend from './base';
 
 class MemoryBackend<T extends Record<string, unknown>> extends StateBackend<T> {
   private gs: T = {} as T;

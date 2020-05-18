@@ -111,13 +111,13 @@ Note that when using the Local Storage persistence backend, all values in the st
 ```js
 import {
   createGlobalStateHook,
-  createLocalStorageBackend
+  LocalStorageBackend
 } from 'react-universal-state';
 
 // Specifying a key in the local storage to use removes all order issues
 // Note that reusing this for multiple calls will mean that the global state is
 // shared between each call.
-const backend = createLocalStorageBackend('globalState');
+const backend = new LocalStorageBackend('globalState');
 
 // Second parameter is the backend object instead of a boolean
 const useGlobal = createGlobalStateHook({ hello: 'world' }, backend);

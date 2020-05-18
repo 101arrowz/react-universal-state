@@ -1,4 +1,4 @@
-import { StateBackend } from '.';
+import StateBackend from './base';
 
 class LocalStorageBackend<
   T extends Record<string, unknown>
