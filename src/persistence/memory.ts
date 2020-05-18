@@ -1,17 +1,15 @@
 import { StateBackend } from '..';
 
-const createMemoryBackend = <
-  T extends Record<string, unknown>
->(): StateBackend<T> => {
-  const gs = {} as T;
-  return {
-    get(k) {
-      return gs[k];
-    },
-    set(k, v) {
-      gs[k] = v;
-    }
-  };
-};
+class MemoryBackend<T extends Record<string, unknown>> extends StateBackend<T> {
+  private gs: T = {} as T;
 
-export default createMemoryBackend;
+  get<K extends keyof T>(k: K): T[K] {
+    return this.gs[k];
+  }
+
+  set<K extends keyof T>(k: K, v: T[K]): void {
+    this.gs[k] = v;
+  }
+}
+
+export default MemoryBackend;

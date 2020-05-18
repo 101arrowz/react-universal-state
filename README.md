@@ -100,7 +100,7 @@ const MyWrappedClassComponent = withGlobal(MyClassComponent);
 ```
 
 ## Purpose
-The goal of this package is to provide a clean, versatile, and easy way to manipulate and persist global state. It is meant as a direct replacement for other tools that offer similar functionality (e.g. Redux). It is also incredibly small (under 1kb) and efficient.
+The goal of this package is to provide a clean, versatile, and easy way to manipulate and persist global state. It is meant as a direct replacement for other tools that offer similar functionality (e.g. Redux). It is also incredibly small (1kb minzipped) and reasonably efficient.
 
 Like other global state managers, you will still likely need to use a centralized file (i.e. containing all of the global hooks and HOCs) but due to the simplicity of the API, most changes will be much faster with `react-universal-state` than with other packages.
 
@@ -147,10 +147,13 @@ const MyComponent = () => {
 ## Advanced: Custom State Backends
 You can create your own state holder if you have some custom logic or want to persist the data in another way. It must support synchronous `.get(k)` and `.set(k, v)` operations. If you have to use an asynchronous API (like Indexed DB) for persistence, the best option is to run the necessary operations in the background and hope your user doesn't close their browser while they are running.
 
+All of these custom backends should extend the exported `StateBackend` class.
+
 ```js
-import { createGlobalStateHook } from 'react-universal-state';
-class CustomBackend {
+import { StateBackend } from 'react-universal-state';
+class CustomBackend extends StateBackend {
   constructor() {
+    super();
     this.globalState = {};
   }
 

@@ -6,7 +6,7 @@ import {
   Component,
   useEffect
 } from 'react';
-import { ls, memory } from './persistence';
+import { LocalStorageBackend, MemoryBackend } from './persistence';
 
 type GlobalSetState<T> = React.Dispatch<SetStateAction<T>>;
 type GlobalStateHookResult<T> = [T, GlobalSetState<T>];
@@ -47,32 +47,32 @@ export type GlobalStateHOC<T> = <
 ) => ComponentType<Omit<P, keyof GlobalStateProps<Pick<T, K>>>>;
 
 /**
- * An interface for defining a custom backend for storing the global state.
+ * An abstract class for defining a backend for storing the global state.
  * Must support a key-value pair model.
  */
-export interface StateBackend<T extends Record<string, unknown>> {
+export abstract class StateBackend<T extends Record<string, unknown>> {
+  /** @internal */
+  _stateSubs: ((newVal: Partial<T>) => void)[] = []
+
   /**
    * Gets an item by its key. Preferably uses a caching layer for optimal
    * performance.
    * @param key The key of the item to get
    * @returns The value associated with the given key
    */
-  get<K extends keyof T>(key: K): T[K];
+  abstract get<K extends keyof T>(key: K): T[K];
   /**
    * Sets the value of a given key
    * @param key The key of the item to set
    * @param value The new value for the provided key
    */
-  set<K extends keyof T>(key: K, value: T[K]): void;
+  abstract set<K extends keyof T>(key: K, value: T[K]): void;
 }
+
 
 const createBackend = <T extends Record<string, unknown>>(
   backend: StateBackend<T> | boolean
-): StateBackend<T> & { stateSubs: ((newVal: Partial<T>) => void)[] } => {
-  const stateBackend: StateBackend<T> =
-    backend === true ? ls() : backend || memory();
-  return Object.assign(stateBackend, { stateSubs: [] });
-};
+): StateBackend<T> => backend === true ? new LocalStorageBackend() : backend || new MemoryBackend();
 
 /**
  * Creates global state hooks supporting all of the given keys
@@ -96,14 +96,14 @@ export function createGlobalStateHook<T extends Record<string, unknown>>(
     hooks[k] = () => {
       const [state, setState] = useState(backend.get(k));
       useEffect(() => {
-        const ind = backend.stateSubs.length;
-        backend.stateSubs.push(v => {
+        const ind = backend._stateSubs.length;
+        backend._stateSubs.push(v => {
           if (v.hasOwnProperty(k) && v[k] !== state) {
             setState(v[k]!);
           }
         });
         return () => {
-          backend.stateSubs.splice(ind, 1);
+          backend._stateSubs.splice(ind, 1);
         };
       }, []);
       return [
@@ -111,7 +111,7 @@ export function createGlobalStateHook<T extends Record<string, unknown>>(
         val => {
           const newVal = val instanceof Function ? val(state) : val;
           backend.set(k, newVal);
-          for (const f of backend.stateSubs)
+          for (const f of backend._stateSubs)
             f(({ [k]: newVal } as unknown) as Partial<T>);
         }
       ];
@@ -152,23 +152,21 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
   return <P extends GlobalStateProps<Pick<T, K>>, K extends keyof T>(
     GSC: ComponentType<P>,
     key: K | K[] = defaultKeys as K[]
-  ) =>
-    class HOCGlobalState extends Component<
+  ) => {
+    const keys = key instanceof Array ? key : [key];
+    return class WithGlobalState extends Component<
       Omit<P, keyof GlobalStateProps<Pick<T, K>>>,
       Pick<T, K>
     > {
+      static displayName = `WithGlobalState<${keys.join(', ')}>(${GSC.displayName || GSC.name || 'Component'})`;
       private localStateInd: number;
       constructor(props: Omit<P, keyof GlobalStateProps<Pick<T, K>>>) {
         super(props);
-        if (key instanceof Array) {
-          const state = {} as Pick<T, K>;
-          for (const k of key) state[k] = backend.get(k);
-          this.state = state;
-        } else {
-          this.state = { [key]: backend.get(key) } as Pick<T, K>;
-        }
-        this.localStateInd = backend.stateSubs.length;
-        backend.stateSubs.push(this.setLocalState);
+        const state = {} as Pick<T, K>;
+        for (const k of keys) state[k] = backend.get(k);
+        this.state = state;
+        this.localStateInd = backend._stateSubs.length;
+        backend._stateSubs.push(this.setLocalState);
       }
 
       setLocalState = ((globalUpdate: Partial<T>) => {
@@ -184,7 +182,7 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
       }).bind(this);
 
       componentWillUnmount(): void {
-        backend.stateSubs.splice(this.localStateInd, 1);
+        backend._stateSubs.splice(this.localStateInd, 1);
       }
 
       render(): JSX.Element {
@@ -198,13 +196,14 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
                 : newState) as Partial<T>;
               for (const k in newGlobalState)
                 backend.set(k, newGlobalState[k]!);
-              for (const f of backend.stateSubs) f(newGlobalState);
+              for (const f of backend._stateSubs) f(newGlobalState);
             },
             globalState
           })
         );
       }
-    };
+    }
+  };
 }
 
-export { ls as createLocalStorageBackend, memory as createMemoryBackend };
+export { LocalStorageBackend, MemoryBackend };
