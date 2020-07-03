@@ -4,7 +4,7 @@
  */
 export default abstract class StateBackend<T extends Record<string, unknown>> {
   /** @internal */
-  _stateSubs: ((newVal: Partial<T>) => void)[] = [];
+  _stateSubs: Set<(newVal: Partial<T>) => void> = new Set();
 
   /**
    * Gets an item by its key. Preferably uses a caching layer for optimal
@@ -12,7 +12,7 @@ export default abstract class StateBackend<T extends Record<string, unknown>> {
    * @param key The key of the item to get
    * @returns The value associated with the given key
    */
-  abstract get<K extends keyof T>(key: K): T[K];
+  abstract get<K extends keyof T>(key: K): T[K] | undefined;
   /**
    * Sets the value of a given key
    * @param key The key of the item to set

@@ -46,46 +46,54 @@ export type GlobalStateHOC<T> = <
   key?: K | K[]
 ) => ComponentType<Omit<P, keyof GlobalStateProps<Pick<T, K>>>>;
 
-const createBackend = <T extends Record<string, unknown>>(
+function createBackend<T extends Record<string, unknown>>(
   backend: StateBackend<T> | boolean
-): StateBackend<T> => backend === true ? new LocalStorageBackend() : backend || new MemoryBackend();
+): StateBackend<T> {
+  if (!backend)
+    return new MemoryBackend();
+  if (backend === true)
+    return new LocalStorageBackend();
+  if (backend instanceof StateBackend)
+    return backend;
+  throw new TypeError('invalid backend');
+}
 
 /**
- * Creates global state hooks supporting all of the given keys
+ * Creates a state store, along with a hook and HOC to access it
  * @param defaults The keys and corresponding default values for the global state
  * @param persist Either a boolean (whether or not to persist to local storage)
  *                or a custom persistence backend. The backend must be an
  *                object supporting backend.get(key) and
  *                backend.set(key, value).
- * @returns A global hook that supports a string key or array of keys to access
- *          global state for. In addition, the function is an object with an
- *          individual hook for each key. See the examples for more details.
+ * @returns A global hook and HOC, both of which support a string key or array
+ *          of keys to access global state for.
  */
-export function createGlobalStateHook<T extends Record<string, unknown>>(
-  defaults: T,
-  persist: StateBackend<T> | boolean = false
-): GlobalStateHook<T> {
+export default function createState<T extends Record<string, unknown>>(defaults: T, persist: StateBackend<T> | boolean = false): { hook: GlobalStateHook<T>; hoc: GlobalStateHOC<T> } {
   const backend = createBackend(persist);
+  const defaultKeys: (keyof T)[] = Object.keys(defaults);
+  for (const k of defaultKeys) {
+    if (backend.get(k) === undefined)
+      backend.set(k, defaults[k]);
+  }
   const hooks = ({} as unknown) as GlobalStateHookObject<T>;
   for (const k in defaults) {
-    if (backend.get(k) === undefined) backend.set(k, defaults[k]);
     hooks[k] = () => {
       const [state, setState] = useState(backend.get(k));
       useEffect(() => {
-        const ind = backend._stateSubs.length;
-        backend._stateSubs.push(v => {
+        const cb = (v: Partial<T>) => {
           if (v.hasOwnProperty(k) && v[k] !== state) {
             setState(v[k]!);
           }
-        });
+        };
+        backend._stateSubs.add(cb);
         return () => {
-          backend._stateSubs.splice(ind, 1);
+          backend._stateSubs.delete(cb);
         };
       }, []);
       return [
-        state,
+        state!,
         val => {
-          const newVal = val instanceof Function ? val(state) : val;
+          const newVal = val instanceof Function ? val(state!) : val;
           backend.set(k, newVal);
           for (const f of backend._stateSubs)
             f(({ [k]: newVal } as unknown) as Partial<T>);
@@ -93,8 +101,7 @@ export function createGlobalStateHook<T extends Record<string, unknown>>(
       ];
     };
   }
-  const defaultKeys = Object.keys(defaults);
-  return Object.assign((key: keyof T | (keyof T)[] = defaultKeys) => {
+  const hook = Object.assign((key: keyof T | (keyof T)[] = defaultKeys) => {
     if (Array.isArray(key)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ret = {} as any;
@@ -103,29 +110,7 @@ export function createGlobalStateHook<T extends Record<string, unknown>>(
     }
     return hooks[key as keyof T]();
   }, hooks);
-}
-
-/**
- * Creates global state HOCs supporting all of the given keys
- * @param defaults The keys and corresponding default values for the global state
- * @param persist Either a boolean (whether or not to persist to local storage)
- *                or a custom persistence backend. The backend must be an
- *                object supporting backend.get(key) and
- *                backend.set(key, value).
- * @returns A global higher order component (HOC) that supports a string key or
- *          array of keys to access global state for. Note that the HOC takes
- *          the component to wrap in its first parameter and the optional
- *          keys in its second parameter. See the examples for more details.
- */
-export function createGlobalStateHOC<T extends Record<string, unknown>>(
-  defaults: T,
-  persist: StateBackend<T> | boolean = false
-): GlobalStateHOC<T> {
-  const backend = createBackend(persist);
-  for (const k in defaults)
-    if (backend.get(k) === undefined) backend.set(k, defaults[k]);
-  const defaultKeys = Object.keys(defaults) as (keyof T)[];
-  return <P extends GlobalStateProps<Pick<T, K>>, K extends keyof T>(
+  const hoc = <P extends GlobalStateProps<Pick<T, K>>, K extends keyof T>(
     GSC: ComponentType<P>,
     key: K | K[] = defaultKeys as K[]
   ) => {
@@ -135,14 +120,12 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
       Pick<T, K>
     > {
       static displayName = `WithGlobalState<${keys.join(', ')}>(${GSC.displayName || GSC.name || 'Component'})`;
-      private localStateInd: number;
       constructor(props: Omit<P, keyof GlobalStateProps<Pick<T, K>>>) {
         super(props);
         const state = {} as Pick<T, K>;
-        for (const k of keys) state[k] = backend.get(k);
+        for (const k of keys) state[k] = backend.get(k)!;
         this.state = state;
-        this.localStateInd = backend._stateSubs.length;
-        backend._stateSubs.push(this.setLocalState);
+        backend._stateSubs.add(this.setLocalState);
       }
 
       setLocalState = ((globalUpdate: Partial<T>) => {
@@ -158,7 +141,7 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
       }).bind(this);
 
       componentWillUnmount(): void {
-        backend._stateSubs.splice(this.localStateInd, 1);
+        backend._stateSubs.delete(this.setLocalState);
       }
 
       render(): JSX.Element {
@@ -179,7 +162,8 @@ export function createGlobalStateHOC<T extends Record<string, unknown>>(
         );
       }
     }
-  };
+  }
+  return { hook, hoc };
 }
 
 export { StateBackend, LocalStorageBackend, MemoryBackend };
