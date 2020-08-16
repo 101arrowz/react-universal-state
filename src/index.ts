@@ -53,9 +53,8 @@ function createBackend<T extends Record<string, unknown>>(
     return new MemoryBackend();
   if (backend === true)
     return new LocalStorageBackend();
-  if (backend instanceof StateBackend)
+  else
     return backend;
-  throw new TypeError('invalid backend');
 }
 
 /**
@@ -71,6 +70,7 @@ function createBackend<T extends Record<string, unknown>>(
 export default function createState<T extends Record<string, unknown>>(defaults: T, persist: StateBackend<T> | boolean = false): { hook: GlobalStateHook<T>; hoc: GlobalStateHOC<T> } {
   const backend = createBackend(persist);
   const defaultKeys: (keyof T)[] = Object.keys(defaults);
+  const stateSubs = new Set<(newVal: Partial<T>) => void>();
   for (const k of defaultKeys) {
     if (backend.get(k) === undefined)
       backend.set(k, defaults[k]);
@@ -85,17 +85,17 @@ export default function createState<T extends Record<string, unknown>>(defaults:
             setState(v[k]!);
           }
         };
-        backend._stateSubs.add(cb);
+        stateSubs.add(cb);
         return () => {
-          backend._stateSubs.delete(cb);
+          stateSubs.delete(cb);
         };
-      }, []);
+      });
       return [
         state!,
         val => {
           const newVal = val instanceof Function ? val(state!) : val;
           backend.set(k, newVal);
-          for (const f of backend._stateSubs)
+          for (const f of stateSubs)
             f(({ [k]: newVal } as unknown) as Partial<T>);
         }
       ];
@@ -125,14 +125,17 @@ export default function createState<T extends Record<string, unknown>>(defaults:
         const state = {} as Pick<T, K>;
         for (const k of keys) state[k] = backend.get(k)!;
         this.state = state;
-        backend._stateSubs.add(this.setLocalState);
+      }
+
+      componentDidMount() {
+        stateSubs.add(this.setLocalState);
       }
 
       setLocalState = ((globalUpdate: Partial<T>) => {
         const newState: Pick<T, K> = this.state;
         let modified = false;
         for (const k in this.state) {
-          if (globalUpdate.hasOwnProperty(k)) {
+          if (globalUpdate.hasOwnProperty(k) && globalUpdate[k] !== this.state[k]) {
             newState[k] = globalUpdate[k]!;
             modified = true;
           }
@@ -141,7 +144,7 @@ export default function createState<T extends Record<string, unknown>>(defaults:
       }).bind(this);
 
       componentWillUnmount(): void {
-        backend._stateSubs.delete(this.setLocalState);
+        stateSubs.delete(this.setLocalState);
       }
 
       render(): JSX.Element {
@@ -155,7 +158,7 @@ export default function createState<T extends Record<string, unknown>>(defaults:
                 : newState) as Partial<T>;
               for (const k in newGlobalState)
                 backend.set(k, newGlobalState[k]!);
-              for (const f of backend._stateSubs) f(newGlobalState);
+              for (const f of stateSubs) f(newGlobalState);
             },
             globalState
           })
