@@ -1,6 +1,6 @@
 {
   "name": "react-universal-state",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Global state for your React app, simplified",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@types/react": "^16.9.35",
+    "@typescript-eslint/eslint-plugin": "^3.9.0",
     "@typescript-eslint/parser": "^2.33.0",
     "eslint": "^6.6.0",
     "eslint-config-prettier": "^6.7.0",
