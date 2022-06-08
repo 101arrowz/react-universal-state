@@ -89,7 +89,7 @@ export default function createState<T extends Record<string, unknown>>(defaults:
         return () => {
           stateSubs.delete(cb);
         };
-      });
+      }, [state, setState]);
       return [
         state!,
         val => {
