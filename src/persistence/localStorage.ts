@@ -1,12 +1,10 @@
 import StateBackend from './base';
 
-class LocalStorageBackend<
-  T extends Record<string, unknown>
-> extends StateBackend<T> {
+class LocalStorageBackend<T extends Record<string, unknown>>
+  implements StateBackend<T> {
   private gs: T;
   private static id = 0;
   constructor(keyName: string = 'rusGlobalState' + LocalStorageBackend.id++) {
-    super();
     this.gs = JSON.parse(localStorage.getItem(keyName) || '{}');
     const persist = (): void =>
       localStorage.setItem(keyName, JSON.stringify(this.gs));

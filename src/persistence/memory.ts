@@ -1,6 +1,7 @@
 import StateBackend from './base';
 
-class MemoryBackend<T extends Record<string, unknown>> extends StateBackend<T> {
+class MemoryBackend<T extends Record<string, unknown>>
+  implements StateBackend<T> {
   private gs: T = {} as T;
 
   get<K extends keyof T>(k: K): T[K] {

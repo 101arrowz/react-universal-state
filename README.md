@@ -108,7 +108,7 @@ Detailed documentation will be added in a future update. For now, see the commen
 
 Note that when using the Local Storage persistence backend, all values in the state must be JSON-serializable. Additionally, if you change the order of calls to `createState` that use the Local Storage backend, they will load incorrect data; therefore, it's recommended to manually create your own backend.
 ```js
-import createState from 'react-universal-state';
+import createState, { LocalStorageBackend } from 'react-universal-state';
 
 // Specifying a key in the local storage to use removes all order issues
 // Note that reusing this for multiple calls will mean that the global state is
@@ -143,11 +143,11 @@ const MyComponent = () => {
 ## Advanced: Custom State Backends
 You can create your own state holder if you have some custom logic or want to persist the data in another way. It must support synchronous `.get(k)` and `.set(k, v)` operations. If you have to use an asynchronous API (like Indexed DB) for persistence, the best option is to run the necessary operations in the background and hope your user doesn't close their browser while they are running.
 
-All of these custom backends should extend the exported `StateBackend` class.
+For TypeScript users, a `StateBackend` interface is exported that should be implemented by all custom backends.
 
 ```js
-import createGlobalState, { StateBackend } from 'react-universal-state';
-class CustomBackend extends StateBackend {
+import createGlobalState from 'react-universal-state';
+class CustomBackend {
   constructor() {
     super();
     this.state = {};
