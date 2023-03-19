@@ -4,7 +4,8 @@ import {
   createElement,
   useState,
   Component,
-  useEffect
+  useEffect,
+  useRef
 } from 'react';
 import { LocalStorageBackend, MemoryBackend, StateBackend } from './persistence';
 
@@ -79,9 +80,11 @@ export default function createState<T extends Record<string, unknown>>(defaults:
   for (const k in defaults) {
     hooks[k] = () => {
       const [state, setState] = useState(backend.get(k));
+      const curState = useRef(state!);
       useEffect(() => {
         const cb = (v: Partial<T>) => {
-          if (v.hasOwnProperty(k) && v[k] !== state) {
+          if (v.hasOwnProperty(k)) {
+            curState.current = v[k]!;
             setState(v[k]!);
           }
         };
@@ -93,8 +96,9 @@ export default function createState<T extends Record<string, unknown>>(defaults:
       return [
         state!,
         val => {
-          const newVal = val instanceof Function ? val(state!) : val;
-          backend.set(k, newVal);
+          const newVal = typeof val == 'function' ? (val as (a: typeof state) => typeof state)(curState.current) : val;
+          curState.current = newVal!;
+          backend.set(k, newVal!);
           for (const f of backend._stateSubs)
             f(({ [k]: newVal } as unknown) as Partial<T>);
         }
@@ -114,7 +118,7 @@ export default function createState<T extends Record<string, unknown>>(defaults:
     GSC: ComponentType<P>,
     key: K | K[] = defaultKeys as K[]
   ) => {
-    const keys = key instanceof Array ? key : [key];
+    const keys = Array.isArray(key) ? key : [key];
     return class WithGlobalState extends Component<
       Omit<P, keyof GlobalStateProps<Pick<T, K>>>,
       Pick<T, K>
@@ -125,39 +129,52 @@ export default function createState<T extends Record<string, unknown>>(defaults:
         const state = {} as Pick<T, K>;
         for (const k of keys) state[k] = backend.get(k)!;
         this.state = state;
-        backend._stateSubs.add(this.setLocalState);
       }
 
       setLocalState = ((globalUpdate: Partial<T>) => {
-        const newState: Pick<T, K> = this.state;
         let modified = false;
-        for (const k in this.state) {
+        const localUpdate: Partial<Pick<T, K>> = {};
+        for (const k of keys) {
           if (globalUpdate.hasOwnProperty(k)) {
-            newState[k] = globalUpdate[k]!;
+            localUpdate[k] = globalUpdate[k];
+            (this.state as Pick<T, K>)[k] = globalUpdate[k]!;
             modified = true;
           }
         }
-        if (modified) this.setState(newState);
+        if (modified) this.setState(localUpdate as Pick<T, K>);
       }).bind(this);
+
+      componentDidMount(): void {
+        backend._stateSubs.add(this.setLocalState);
+      }
 
       componentWillUnmount(): void {
         backend._stateSubs.delete(this.setLocalState);
       }
 
       render(): JSX.Element {
-        const globalState = this.state;
+        const prevState: Pick<T, K> = this.state;
         return (
           createElement(GSC, {
             ...(this.props as P),
             setGlobalState(newState) {
-              const newGlobalState = (newState instanceof Function
-                ? newState(globalState)
+              const newGlobalState = (typeof newState == 'function'
+                ? newState(prevState)
                 : newState) as Partial<T>;
-              for (const k in newGlobalState)
-                backend.set(k, newGlobalState[k]!);
-              for (const f of backend._stateSubs) f(newGlobalState);
+              const targetUpdate: Partial<Pick<T, K>> = {};
+              if (newGlobalState != null) {
+                for (const k of keys) {
+                  if (newGlobalState.hasOwnProperty(k))
+                    targetUpdate[k] = newGlobalState[k];
+                }
+              }
+              for (const k in targetUpdate) {
+                backend.set(k, targetUpdate[k]!);
+                prevState[k] = targetUpdate[k]!;
+              }
+              for (const f of backend._stateSubs) f(targetUpdate as Partial<T>);
             },
-            globalState
+            globalState: prevState
           })
         );
       }
